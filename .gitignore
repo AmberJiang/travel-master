@@ -9,3 +9,4 @@ dist/
 build/
 data/ocr_dump.txt
 data/*attractions.json
+*.pdf
