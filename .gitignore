@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.DS_Store
+*.egg-info/
+dist/
+build/
+data/ocr_dump.txt
+data/*attractions.json

@@ -1,0 +1,5 @@
+pydantic
+pypdf
+requests
+pypdfium2
+pytesseract
