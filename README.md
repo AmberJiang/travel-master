@@ -22,3 +22,10 @@ tech keywords： muti-agent framework
 
 MVP:
 跑通一个从导入知识库到输出回答的流程，如果问不知道的问题，回复：我不知道，你想要我联网查询吗？
+
+Muti-Agent: 
+Agent 1: 调度员 分析用户输入意图 -> 是咨询一个问题？ 还是想重新规划路线。 过滤废话，不聊闲天，节省token。
+**
+Agent 2:
+攻略管理员 (Knowledge Manager):  
+问题1： 命令cursor写一个脚本，截取旅游攻略pdf中 固定的schema中的信息，存为json格式。 
