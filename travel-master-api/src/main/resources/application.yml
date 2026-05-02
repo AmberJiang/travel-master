@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: travel-master-api
+  servlet:
+    multipart:
+      max-file-size: 60MB
+      max-request-size: 60MB
   ai:
     mcp:
       client:
@@ -38,3 +42,29 @@ mcp:
         tencent-cls:
           url: https://mcp-api.tencent-cloud.com
           sse-endpoint: /sse/8736cac72f5dd21c
+
+knowledge:
+  ingest:
+    # 上传文件上限（20MB 足够覆盖大部分截图/PDF）
+    max-file-size-mb: 60
+    # 单次 OCR/抽取/落库允许的最大耗时
+    python-timeout-seconds: 180
+    # 向量库目录（Chroma 持久化；从 travel-master-api 启动时指向仓库根目录下的 data）
+    vector-db-path: ../data/vector_db/chroma
+    collection: travel_master_knowledge
+    # embedding 模型（sentence-transformers）
+    embedding-model: sentence-transformers/all-MiniLM-L6-v2
+    # LLM 视觉 OCR（可选）。不填则直接走 tesseract。
+    deepseek-vision-model: ""
+    # PDF 渲染与抽取参数
+    max-pages: 10
+    pdf-dpi: 300
+    # Python venv（从 travel-master-api 启动时指向仓库根目录下的 venv）
+    python-venv-path: ../data/python_venv
+  rag:
+    top-k: 5
+    python-timeout-seconds: 45
+  planner:
+    top-k-per-query: 8
+    material-cap: 24
+    max-tokens: 2800

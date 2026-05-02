@@ -13,6 +13,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
@@ -25,17 +27,20 @@ import java.util.UUID;
 @Service
 public class DispatcherService {
 
+    private static final Logger log = LoggerFactory.getLogger(DispatcherService.class);
+
     private static final String SYSTEM_PROMPT = """
             你是旅行应用的入口调度器，只做意图识别，不聊天。
             任务：
             1) 过滤寒暄和无效废话，只保留对意图有帮助的关键信息。
-            2) 判断用户意图 intent，只能是 QUESTION、REPLAN_ROUTE、OTHER 三选一。
+            2) 判断用户意图 intent，只能是 QUESTION、PLAN_ITINERARY、REPLAN_ROUTE、OTHER 四选一。
             3) 输出严格 JSON，不要输出 markdown，不要额外文本。
             输出格式：
-            {"intent":"QUESTION|REPLAN_ROUTE|OTHER","reasoning":"不超过25字中文"}
+            {"intent":"QUESTION|PLAN_ITINERARY|REPLAN_ROUTE|OTHER","reasoning":"不超过25字中文"}
             判定规则：
             - 问知识、攻略、建议、解释 => QUESTION
-            - 提到改行程、重排路线、调整景点顺序/天数/交通 => REPLAN_ROUTE
+            - 明确要「做/规划/排」多日行程、几天怎么玩、帮我安排路线（含目的地与大致天数）=> PLAN_ITINERARY
+            - 在已有行程思路上改顺序、加减天、换交通、重排 => REPLAN_ROUTE
             - 其他或无法判断 => OTHER
             """;
 
@@ -127,6 +132,9 @@ public class DispatcherService {
         }
         try {
             McpAsyncClient client = mcpAsyncClients.get(0);
+
+            String clientClass = client.getClass().getName();
+
             Method initializeMethod = client.getClass().getMethod("initialize");
             Object initializeMono = initializeMethod.invoke(client);
             Method blockInitMethod = initializeMono.getClass().getMethod("block", Duration.class);
@@ -148,8 +156,43 @@ public class DispatcherService {
             }
             return "MCP已连接";
         } catch (Exception ex) {
-            return "MCP调用失败";
+            String exName = ex.getClass().getName();
+            String exMsg = ex.getMessage();
+            Throwable cause = ex.getCause();
+            String causeMsg = (cause != null ? cause.getMessage() : null);
+
+            // 给“reasoning”预留短长度，避免超长堆栈污染响应
+            String detail = exMsg;
+            if (!StringUtils.hasText(detail) && StringUtils.hasText(causeMsg)) {
+                detail = causeMsg;
+            }
+            detail = detail == null ? "" : safeOneLine(detail);
+            detail = truncate(detail, 120);
+
+            log.warn("MCP调用失败：client={}, exception={}, message={}", 
+                    mcpAsyncClients.isEmpty() ? "-" : mcpAsyncClients.get(0).getClass().getName(),
+                    exName, detail, ex);
+
+            if (StringUtils.hasText(detail)) {
+                return "MCP调用失败：" + exName + "；" + detail;
+            }
+            return "MCP调用失败：" + exName;
         }
+    }
+
+    private static String safeOneLine(String s) {
+        // 避免堆栈/消息里带换行符，导致日志与 JSON 输出难读
+        return s.replace('\n', ' ').replace('\r', ' ').trim();
+    }
+
+    private static String truncate(String s, int maxLen) {
+        if (s == null) {
+            return "";
+        }
+        if (s.length() <= maxLen) {
+            return s;
+        }
+        return s.substring(0, maxLen) + "...";
     }
 
     private String normalize(String message) {
@@ -159,6 +202,7 @@ public class DispatcherService {
     private IntentType parseIntent(String intentText) {
         return switch (intentText) {
             case "QUESTION" -> IntentType.QUESTION;
+            case "PLAN_ITINERARY" -> IntentType.PLAN_ITINERARY;
             case "REPLAN_ROUTE" -> IntentType.REPLAN_ROUTE;
             default -> IntentType.OTHER;
         };
@@ -167,7 +211,7 @@ public class DispatcherService {
     private String resolveAgent(IntentType intent) {
         return switch (intent) {
             case QUESTION -> "knowledge-agent";
-            case REPLAN_ROUTE -> "route-planner-agent";
+            case PLAN_ITINERARY, REPLAN_ROUTE -> "route-planner-agent";
             case OTHER -> "fallback-agent";
         };
     }

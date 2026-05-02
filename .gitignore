@@ -8,6 +8,11 @@ __pycache__/
 dist/
 build/
 node_modules/
+travel-master-api/.ingest_venv/
+travel-master-api/target/
+data/vector_db/
+travel-master-web/dist/
+.vscode/
 data/ocr_dump.txt
 data/*attractions.json
 *.pdf

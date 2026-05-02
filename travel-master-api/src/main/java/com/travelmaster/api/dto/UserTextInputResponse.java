@@ -1,6 +1,7 @@
 package com.travelmaster.api.dto;
 
 import java.time.Instant;
+import java.util.List;
 
 public record UserTextInputResponse(
         String requestId,
@@ -8,6 +9,11 @@ public record UserTextInputResponse(
         String originalMessage,
         String normalizedMessage,
         int messageLength,
-        Instant receivedAt
+        Instant receivedAt,
+        IntentType intent,
+        String reasoning,
+        String routeToAgent,
+        String ragAnswer,
+        List<RagCitation> ragCitations
 ) {
 }

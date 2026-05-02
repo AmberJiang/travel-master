@@ -1,4 +1,7 @@
 pydantic
+pillow
+chromadb
+beautifulsoup4
 pypdf
 requests
 pypdfium2
